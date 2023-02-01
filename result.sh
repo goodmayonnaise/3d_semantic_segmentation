@@ -1,0 +1,1 @@
+watch -n 1 tail ./log/result.csv
