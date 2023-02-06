@@ -52,7 +52,6 @@ class CityScapesDataset(Dataset):
             target[c] = (label==c).type(torch.int32).clone().detach()
 
         sample = {'X': img, 'Y': target, 'l': label}  
-        print(img_name)
 
         return sample
 
