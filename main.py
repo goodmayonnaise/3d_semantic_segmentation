@@ -27,13 +27,13 @@ if __name__ == "__main__":
     fusion_lev = "none" # none, early, mid_stage1~4, late 
 
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID" 
-    os.environ["CUDA_VISIBLE_DEVICES"] = "6,7"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
     gpus = os.environ["CUDA_VISIBLE_DEVICES"]
     num_workers = len(gpus.split(",")) * 2
 
     phase = "train" # train /transfer_learning / test 
     freeze_cnt = 150
-    dataset = "kitti" # cityscapes / kitti / city_kitti / semantic_kitti
+    dataset = "cityscapes" # cityscapes / kitti / city_kitti / semantic_kitti
     n_class    = 20
     input_shape = (384//4, 1280//4) # 96 312
     criterion = FocalLosswithDiceRegularizer(reduction="mean") # setting loss 
@@ -56,16 +56,16 @@ if __name__ == "__main__":
     if phase in ["train", "transfer_learning"]:
         if dataset in ["cityscapes", "city_kitti"]:
             if dataset == "cityscapes":    
-                batch_size = 32                  # <= 5 
+                batch_size = 50                  # <= 5 
                 train_file = os.path.join(cityscapes_path, "train_aug.csv") # train.csv / train_aug.csv 
                 val_file   = os.path.join(cityscapes_path, "val.csv") 
             else : # city_kitti
                 batch_size = 28                  # <= 5 
                 train_file = os.path.join(cityscapes_path, "city_kitti_train_aug.csv") 
                 val_file   = os.path.join(cityscapes_path, "city_kitti_val.csv")
-            train_data = CityScapesDataset(csv_file=train_file, phase='train')
+            train_data = CityScapesDataset(csv_file=train_file, input_shape=input_shape, n_class=n_class)
             train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-            val_data = CityScapesDataset(csv_file=val_file, phase='val', flip_rate=0)
+            val_data = CityScapesDataset(csv_file=val_file, input_shape=input_shape, n_class=n_class)
             val_loader = DataLoader(val_data, batch_size=batch_size, num_workers=num_workers)
 
         elif dataset == "kitti":

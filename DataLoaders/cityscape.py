@@ -22,7 +22,7 @@ num_class = 20
 means     = np.array([103.939, 116.779, 123.68]) / 255. # mean of three channels in the order of BGR
 
 class CityScapesDataset(Dataset):
-    def __init__(self, csv_file, input_shape, n_class=num_class, crop=False, flip_rate=0., transform=None):
+    def __init__(self, csv_file, input_shape, n_class=num_class):
         self.data = pd.read_csv(csv_file)
         self.n_class   = n_class
         self.input_shape = input_shape
@@ -52,6 +52,7 @@ class CityScapesDataset(Dataset):
             target[c] = (label==c).type(torch.int32).clone().detach()
 
         sample = {'X': img, 'Y': target, 'l': label}  
+        print(img_name)
 
         return sample
 

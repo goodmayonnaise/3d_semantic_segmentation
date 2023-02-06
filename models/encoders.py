@@ -72,13 +72,13 @@ class KSC2022(nn.Module):
         self.num_tf = 9
         self.drop_path = 0.1
 
-        self.patch_layer1 = PatchEmbedding_SegFormer(512, self.patch_sizes, self.padding_sizes, self.strides, 256)
-        self.tfblock1 = EfficientAttentionBlock((self.input_shape[0]//8, self.input_shape[1]//8), 512, self.strides, self.reduction_ratio, self.num_heads, self.expantion_ratio, drop_path=self.drop_path)
-        self.transform1 = Rearrange('b (h w) e -> b e h w', h=self.input_shape[0]//8, w=self.input_shape[1]//8)
+        self.patch_layer3 = PatchEmbedding_SegFormer(512, self.patch_sizes, self.padding_sizes, self.strides, 256)
+        self.tfblock3 = EfficientAttentionBlock((self.input_shape[0]//8, self.input_shape[1]//8), 512, self.strides, self.reduction_ratio, self.num_heads, self.expantion_ratio, drop_path=self.drop_path)
+        self.transform3 = Rearrange('b (h w) e -> b e h w', h=self.input_shape[0]//8, w=self.input_shape[1]//8)
 
-        self.patch_layer2 = PatchEmbedding_SegFormer(1024, self.patch_sizes, self.padding_sizes, self.strides, 512)
-        self.tfblock2 = EfficientAttentionBlock((self.input_shape[0]//16, self.input_shape[1]//16), 1024, self.strides, self.reduction_ratio, self.num_heads, self.expantion_ratio, drop_path=self.drop_path)
-        self.transform2 = Rearrange('b (h w) e -> b e h w', h=self.input_shape[0]//16, w=self.input_shape[1]//16)
+        self.patch_layer4 = PatchEmbedding_SegFormer(1024, self.patch_sizes, self.padding_sizes, self.strides, 512)
+        self.tfblock4 = EfficientAttentionBlock((self.input_shape[0]//16, self.input_shape[1]//16), 1024, self.strides, self.reduction_ratio, self.num_heads, self.expantion_ratio, drop_path=self.drop_path)
+        self.transform4 = Rearrange('b (h w) e -> b e h w', h=self.input_shape[0]//16, w=self.input_shape[1]//16)
 
 
     def forward(self, input, first_layer="ResNeSt"):
@@ -90,13 +90,12 @@ class KSC2022(nn.Module):
             f2 = self.resnest.maxpool(f1)
             f2 = self.resnest.layer1(f2)
 
+            f3 = self.resnest.layer2(f2)
             # segformer 
-            f3 = self.patch_layer1(f2) 
+            f4 = self.patch_layer4(f3) 
             for _ in range(self.num_tf):
-                f3 = self.tfblock1(f3)  
-            f3 = self.transform1(f3)
-
-            f4 = self.resnest.layer3(f3)
+                f4 = self.tfblock4(f4)  
+            f4 = self.transform4(f4)
 
             f1 = self.spartialattention_x1(f1)
             f2 = self.spartialattention_x2(f2)
