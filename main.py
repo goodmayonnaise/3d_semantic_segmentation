@@ -8,7 +8,7 @@ from torchinfo import summary as torchsummary
 from utils import set_device, load_weight
 from losses import FocalLosswithDiceRegularizer
 from model import KSC2022, KSC2022_Fusion
-from DataLoaders.cityscape import CityScapesDataset
+from DataLoaders.cityscapes import CityScapesDataset
 from DataLoaders.KITTI import load_data
 from DataLoaders.SemanticKITTI import load_semanticKITTI
 from pytorchtools import EarlyStopping
