@@ -1,25 +1,19 @@
 import os, yaml
 import torch
 
-def save(ckpt_dir, net, optim, epoch):
-    if not os.path.exists(ckpt_dir):
-        os.makedirs(ckpt_dir)
-
-    torch.save({'net': net.state_dict(), 'optim': optim.state_dict()}, '%s/model_epoch%d.pth' % (ckpt_dir, epoch))
-
-# def load_weight(ckpt_dir, model, device):
-#     dict_model = torch.load(ckpt_dir, map_location=device)
-#     model.load_state_dict(dict_model, strict=False)
-    # return model 
+def load_weight(ckpt_dir, model, device):
+    dict_model = torch.load(ckpt_dir, map_location=device)
+    model.load_state_dict(dict_model, strict=False)
+    return model 
 
 # 다음 학습 시 쓸 것 - test 필요 
-def load_weight(ckpt_dir, model, optimizer, epoch, device):
-    dict_model = torch.load(ckpt_dir, map_location=device)
+# def load_weight(ckpt_dir, model, optimizer, epoch, device):
+#     dict_model = torch.load(ckpt_dir, map_location=device)
 
-    model.load_state_dict(dict_model['model_state_dict'], strict=False)
-    optimizer.load_state_dict(dict_model['optimizer_state_dict'])
-    # epoch.load_state_dict(dict_model['epoch'])
-    return model, optimizer, epoch
+#     model.load_state_dict(dict_model['model_state_dict'], strict=False)
+#     optimizer.load_state_dict(dict_model['optimizer_state_dict'])
+#     # epoch.load_state_dict(dict_model['epoch'])
+#     return model, optimizer, epoch
 
 def set_device(gpus):
     device = "cuda" if torch.cuda.is_available() else 'cpu'
