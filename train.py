@@ -20,10 +20,10 @@ def train(epochs, train_loader, val_loader, model, optimizer, use_gpu, criterion
         print(f"\n---------------------------------------------------------------------------------------------------------------------\nEpoch {epoch+1}")
         batch_time = AverageMeter('train time', ':6.3f')
         data_time = AverageMeter('train data time', ':6.3f')
-        loss_running = AverageMeter('train loss', ':.4e')
-        miou_running = AverageMeter('train mIoU', ':.3f')
-        p_acc_running = AverageMeter('train P_acc', ':.3f')
-        p_acc2_running = AverageMeter('train P_acc2', ':.3f')
+        loss_running = AverageMeter('train loss', ':.4f')
+        miou_running = AverageMeter('train mIoU', ':.4f')
+        p_acc_running = AverageMeter('train P_acc', ':.4f')
+        p_acc2_running = AverageMeter('train P_acc2', ':.4f')
         progress = ProgressMeter(
                                  len(train_loader),
                                  [batch_time, data_time, loss_running,
@@ -107,25 +107,30 @@ def train(epochs, train_loader, val_loader, model, optimizer, use_gpu, criterion
 
         # save history 
         with open('./log/result.csv', 'a') as epoch_log:
-            epoch_log.write('{} \t {:.5f} \t {:.5f} \t {:.5f} \t {:.5f} \t {:.5f} \t {:.5f} \t {:.5f} \t {:.5f}\n'.format(epoch, train_loss, val_loss, train_miou, val_miou, train_acc, val_acc, train_acc2, val_acc2))
+            epoch_log.write('{} \t {:.4f} \t {:.4f} \t {:.4f} \t {:.4f} \t {:.4f} \t {:.4f} \t {:.4f} \t {:.4f}\n'.format(epoch, train_loss, val_loss, train_miou, val_miou, train_acc, val_acc, train_acc2, val_acc2))
 
-        # save model                    --------------------------------------------------
+        # save model per epochs         --------------------------------------------------
         torch.save({
                     'epoch': epoch,
                     'model_state_dict': model.state_dict(), # Encoder Decoder 따로 저장을 고려할 때 더 자세히 파보면 가능할 것 같다. (전지연)
                     'optimizer_state_dict': optimizer.state_dict(),
                     'best_miou': best_miou,
                     'metrics': metrics,
-                    }, './weights/checkpoint.pth.tar')
+                    }, './weights/last_weights.pth.tar')
 
-        # Save best model to file       --------------------------------------------------
+        # Save best miou model to file       --------------------------------------------------
         if val_miou > best_miou:
             print('mIoU improved from {:.4f} to {:.4f}.'.format(best_miou, val_miou))
             best_miou = val_miou
             torch.save({
                 'epoch': epoch,
-                'model_state_dict': model.state_dict(),}, './weights/best_weights.pth.tar')
+                'model_state_dict': model.state_dict(),}, './weights/bestmiou_weights.pth.tar')
         
+        # early stopping                --------------------------------------------------
+        early_stopping(val_loss=val_loss, model=model, epoch=epoch, optimizer=optimizer, best_miou=best_miou, metrics=metrics)
+        if early_stopping.early_stop:
+            break
+
         # tensorboard                   --------------------------------------------------
         writer_train.add_scalar("Loss", train_loss, epoch)
         writer_train.add_scalar("mIoU", train_miou, epoch)
@@ -140,21 +145,16 @@ def train(epochs, train_loader, val_loader, model, optimizer, use_gpu, criterion
         writer_val.flush()
         writer_val.close()
 
-        # early stopping                --------------------------------------------------
-        early_stopping(val_loss=val_loss, model=model, epoch=epoch, optimizer=optimizer, best_miou=best_miou, metrics=metrics)
-        if early_stopping.early_stop:
-            break
-
         time_elapsed = time() - since
         print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
 
 def val(model, criterion, epoch, val_loader, use_gpu, n_class, device):
     batch_time = AverageMeter('val time', ':6.3f')
     data_time = AverageMeter('val data time', ':6.3f')
-    loss_running = AverageMeter('val Loss', ':.4e')
-    miou_running = AverageMeter('val mIoU', ':.3f')
-    acc_running = AverageMeter('val P_acc', ':.3f')
-    acc2_running = AverageMeter('val P_acc2', ':.3f')
+    loss_running = AverageMeter('val Loss', ':.4f')
+    miou_running = AverageMeter('val mIoU', ':.4f')
+    acc_running = AverageMeter('val P_acc', ':.4f')
+    acc2_running = AverageMeter('val P_acc2', ':.4f')
     progress = ProgressMeter(
                              len(val_loader),
                              [batch_time, data_time, loss_running, miou_running, acc_running, acc2_running],

@@ -10,10 +10,10 @@ from torch.autograd import Variable
 def _test(test_loader, model, use_gpu, criterion, n_class, device):
     batch_time = AverageMeter('test time', ':6.3f')
     data_time = AverageMeter('test data time', ':6.3f')
-    loss_running = AverageMeter('test Loss', ':.4e')
-    miou_running = AverageMeter('test mIoU', ':.4e')
-    acc_running = AverageMeter('test acc', ':.4e')
-    acc2_running = AverageMeter('test acc2', ':.4e')
+    loss_running = AverageMeter('test Loss', ':.4f')
+    miou_running = AverageMeter('test mIoU', ':.4f')
+    acc_running = AverageMeter('test acc', ':.4f')
+    acc2_running = AverageMeter('test acc2', ':.4f')
     progress = ProgressMeter(
                             len(test_loader),
                             [batch_time, data_time, loss_running, miou_running, acc_running, acc2_running],
@@ -57,4 +57,4 @@ def _test(test_loader, model, use_gpu, criterion, n_class, device):
             torch.cuda.empty_cache()
 
 
-    print('\ntest loss {:.4f} | test miou {:.4f} | test acc {:.4f} | test acc2 {:.4f}'.format(loss_running.avg, miou_running, acc_running.avg, acc2_running.avg))
+    print('\ntest loss {:.4f} | test miou {:.4f} | test acc {:.4f} | test acc2 {:.4f}'.format(loss_running.avg, miou_running.avg, acc_running.avg, acc2_running.avg))

@@ -110,8 +110,8 @@ if __name__ == "__main__":
         optimizer = Adam(model.to(device).parameters(), lr=lr)
         # scheduler = lr_scheduler.StepLR(optimizer, step_size=step_size, gamma=gamma)  # decay LR by a factor of 0.5 every 30 epochs
         # scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
-        # scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=100, eta_min=0.001)
-        scheduler = lr_scheduler.CyclicLR(optimizer, base_lr=0.001, max_lr=0.1, step_size_up=50, step_size_down=None, mode='exp_range', gamma=0.995, cycle_momentum=False)
+        scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=100, eta_min=0.001)
+        # scheduler = lr_scheduler.CyclicLR(optimizer, base_lr=0.001, max_lr=0.1, step_size_up=50, step_size_down=None, mode='exp_range', gamma=0.995, cycle_momentum=False)
         
         board_path = "log"
         if not os.path.exists(board_path):
@@ -126,7 +126,7 @@ if __name__ == "__main__":
         with open('./log/result.csv', 'a') as epoch_log:
             epoch_log.write('\n--------------new--------------\nepoch\ttrain loss\tval loss\ttrain miou\tval miou\ttrain acc\tval acc\t\ttrain acc2\tval acc2\n')
 
-        early_stopping = EarlyStopping(patience=10, verbose=True, path='./weights/best_checkpoint.pt')
+        early_stopping = EarlyStopping(patience=10, verbose=True, path='./weights/earlystop_weights.pt')
         t_s = datetime.now()
         print(f'\ntrain start time : {t_s}')
         train(epochs, train_loader, val_loader, model, optimizer, use_gpu, criterion, dataset,
