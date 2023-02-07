@@ -31,8 +31,10 @@ if __name__ == "__main__":
     gpus = os.environ["CUDA_VISIBLE_DEVICES"]
     num_workers = len(gpus.split(",")) * 2
 
-    phase = "train" # train /transfer_learning / test 
-    freeze_cnt = 150
+    phase = "transfer_learning" # train /transfer_learning / test 
+    pretrained_model = '/home/jyjeon/code/pre-trained-model/4.kitti_resnest50_2s2x40d_segnext_3711_freeze10_best_check/weights_3_1/best_checkpoint.pt'
+    freeze_cnt = 10
+
     dataset = "kitti" # cityscapes / kitti / city_kitti / semantic_kitti
     n_class    = 20
     input_shape = (384//4, 1280//4) # 96 312
@@ -91,7 +93,7 @@ if __name__ == "__main__":
             model = KSC2022(input_shape=input_shape, fusion_lev=fusion_lev, n_class=n_class)
 
         if phase == "transfer_learning":
-            model = load_weight(ckpt_dir='./weights/Cityscapes_aug_best_checkpoint.pt', model=model, device=device)
+            model = load_weight(ckpt_dir=pretrained_model, model=model, device=device)
             freeze = 0 
             for param in model.parameters():
                 if freeze < freeze_cnt:
