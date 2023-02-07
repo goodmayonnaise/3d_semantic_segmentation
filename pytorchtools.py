@@ -55,7 +55,7 @@ class EarlyStopping:
             'optimizer_state_dict': optimizer.state_dict(),
             'best_miou': best_miou,
             'metrics': metrics,
-            }, './weights/checkpoint.pth.tar')
+            }, self.path)
 
 
         self.val_loss_min = val_loss

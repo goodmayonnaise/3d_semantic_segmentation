@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     phase = "train" # train /transfer_learning / test 
     freeze_cnt = 150
-    dataset = "cityscapes" # cityscapes / kitti / city_kitti / semantic_kitti
+    dataset = "kitti" # cityscapes / kitti / city_kitti / semantic_kitti
     n_class    = 20
     input_shape = (384//4, 1280//4) # 96 312
     criterion = FocalLosswithDiceRegularizer(reduction="mean") # setting loss 
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     gamma      = 0.5
 
     cityscapes_path = "/mnt/team_gh/cityscapes"
-    kitti_path = "/mnt/data/home/team_gh/data/KITTI_Semantics_aug"
+    kitti_path = "/mnt/team_gh/KITTI_Semantics_aug"
     semantickitti_path = '/mnt/data/home/team_gh/data/kitti/dataset/f_sequences'
     
     device = set_device(gpus) 
@@ -128,10 +128,11 @@ if __name__ == "__main__":
 
         early_stopping = EarlyStopping(patience=10, verbose=True, path='./weights/earlystop_weights.pt')
         t_s = datetime.now()
+
         print(f'\ntrain start time : {t_s}')
         train(epochs, train_loader, val_loader, model, optimizer, use_gpu, criterion, dataset,
               n_class, metrics, scheduler, writer_train, writer_val, early_stopping, device)
-        print(f'\ntrain start time : {t_s}, end of train : {datetime.now()}')
+        print(f'\ntrain start time : {t_s}, end of train : {datetime.now()}, total train itme {datetime.now()-t_s}')
 
 
     elif phase == "test":

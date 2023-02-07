@@ -124,7 +124,10 @@ def train(epochs, train_loader, val_loader, model, optimizer, use_gpu, criterion
             best_miou = val_miou
             torch.save({
                 'epoch': epoch,
-                'model_state_dict': model.state_dict(),}, './weights/bestmiou_weights.pth.tar')
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'best_miou': best_miou,
+                'metrics': metrics}, './weights/best_miou_weights.pth.tar')
         
         # early stopping                --------------------------------------------------
         early_stopping(val_loss=val_loss, model=model, epoch=epoch, optimizer=optimizer, best_miou=best_miou, metrics=metrics)
