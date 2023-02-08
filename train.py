@@ -107,7 +107,7 @@ def train(epochs, train_loader, val_loader, model, optimizer, use_gpu, criterion
 
         # save history 
         with open('./log/result.csv', 'a') as epoch_log:
-            epoch_log.write('{} \t\t {:.4f} \t {:.4f} \t {:.4f} \t {:.4f} \t {:.4f} \t {:.4f} \t {:.4f} \t {:.4f}\n'.format(epoch, train_loss, val_loss, train_miou, val_miou, train_acc, val_acc, train_acc2, val_acc2))
+            epoch_log.write('{} \t {:.4f} \t {:.4f} \t {:.4f} \t {:.4f} \t {:.4f} \t {:.4f} \t {:.4f} \t {:.4f}\n'.format(epoch, train_loss, val_loss, train_miou, val_miou, train_acc, val_acc, train_acc2, val_acc2))
 
         # save model per epochs         --------------------------------------------------
         torch.save({
