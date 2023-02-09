@@ -115,6 +115,7 @@ def train(epochs, train_loader, val_loader, model, optimizer, use_gpu, criterion
                     'model_state_dict': model.state_dict(), # Encoder Decoder 따로 저장을 고려할 때 더 자세히 파보면 가능할 것 같다. (전지연)
                     'optimizer_state_dict': optimizer.state_dict(),
                     'best_miou': best_miou,
+                    'last_val_miou': val_miou,
                     'metrics': metrics,
                     }, './weights/last_weights.pth.tar')
 
