@@ -134,7 +134,7 @@ if __name__ == "__main__":
         print(f'\ntrain start time : {t_s}')
         train(epochs, train_loader, val_loader, model, optimizer, use_gpu, criterion, dataset,
               n_class, metrics, scheduler, writer_train, writer_val, early_stopping, device)
-        print(f'\ntrain start time : {t_s}, end of train : {datetime.now()}, total train itme {datetime.now()-t_s}')
+        print(f'\n[train time information]\n\ttrain start time\t{t_s}\n\tend of train\t{datetime.now()}\n\ttotal train time\t{datetime.now()-t_s}')
 
 
     elif phase == "test":
