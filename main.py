@@ -31,7 +31,7 @@ if __name__ == "__main__":
     gpus = os.environ["CUDA_VISIBLE_DEVICES"]
     num_workers = len(gpus.split(",")) * 2
 
-    phase = "transfer_learning" # train /transfer_learning / test 
+    phase = "train" # train /transfer_learning / test 
     pretrained_model = '/home/jyjeon/code/pre-trained-model/4.kitti_resnest50_2s2x40d_segnext_3711_freeze10_best_check/weights_3_1/best_checkpoint.pt'
     freeze_cnt = 10
 
