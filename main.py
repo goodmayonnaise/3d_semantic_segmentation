@@ -40,7 +40,7 @@ if __name__ == "__main__":
     input_shape = (384//4, 1280//4) # 96 312
     criterion = FocalLosswithDiceRegularizer(reduction="mean") # setting loss 
       
-    epochs     = 5
+    epochs     = 500
     lr         = 1e-4
     momentum   = 0
     w_decay    = 1e-5

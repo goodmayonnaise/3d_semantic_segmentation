@@ -63,11 +63,11 @@ class KSC2022(nn.Module):
 
     def forward(self, input):
 
-        f1, f2, f3, f4 = self.encoder(input, first_layer="ResNeSt")
+        f2, f3, f4, f5 = self.encoder(input, first_layer="ResNeSt")
         # f1, f2, f3, f4 = self.encoder(input, first_layer="segnext") 
 
 
-        x = self.decoder(f1, f2, f3, f4)
+        x = self.decoder(f2, f3, f4, f5)
         # x = self.decoder(f4)
         segment_out = F.softmax(self.Convolution(x), dim=1)
 

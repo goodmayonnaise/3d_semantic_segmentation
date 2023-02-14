@@ -54,10 +54,11 @@ class TransUNet_Decorder(nn.Module): # resnest 50
         super(TransUNet_Decorder, self).__init__()
         self.fusion_lev = fusion_lev
 
-        self.deconv_1 = Deconv_TransUnet_Decorder(in_filters=1024, out_filters=512)
+        self.deconv_0 = Deconv_TransUnet_Decorder(in_filters=2048, out_filters=1024)
+        self.deconv_1 = Deconv_TransUnet_Decorder(in_filters=1024*2, out_filters=512)
         self.deconv_2 = Deconv_TransUnet_Decorder(in_filters=512*2, out_filters=256)
-        self.deconv_3 = Deconv_TransUnet_Decorder(in_filters=256*2, out_filters=64) 
-        self.conv_4 = nn.Conv2d(in_channels=64*2, out_channels=64, kernel_size=(3, 3), padding='same')
+        # self.deconv_3 = Deconv_TransUnet_Decorder(in_filters=256*2, out_filters=64) 
+        self.conv_4 = nn.Conv2d(in_channels=256*2, out_channels=64, kernel_size=(3, 3), padding='same')
 
         self.dupsample = DUpsampling(inplanes=64, scale=2, num_class=64)
         self.batch_norm = nn.BatchNorm2d(num_features=64)
@@ -67,10 +68,11 @@ class TransUNet_Decorder(nn.Module): # resnest 50
 
         self.Dropout = nn.Dropout(0.3)
                                       
-    def forward(self, f1, f2, f3, f4):
-        x = self.deconv_1(f4, f3)   
+    def forward(self, f2, f3, f4, f5):
+        x = self.deconv_0(f5, f4)
+        x = self.deconv_1(x, f3)   
         x = self.deconv_2(x, f2)          
-        x = self.deconv_3(x, f1)         
+        # x = self.deconv_3(x, f1)         
         x = self.conv_4(x)          
         x = self.batch_norm(x)      
         x = self.Dropout(x)         
@@ -83,11 +85,11 @@ class TransUNet_Decorder(nn.Module): # resnest 50
         x = self.Dropout(x)         
         x = self.Relu_activate(x)   
 
-        # x = self.upsampling(x)      
-        # x = self.conv_5(x)          
-        # x = self.batch_norm_5(x)    
-        # x = self.Dropout(x)      
-        # x = self.Relu_activate_5(x)
+        x = self.upsampling(x)      
+        x = self.conv_5(x)          
+        x = self.batch_norm(x)    
+        x = self.Dropout(x)      
+        x = self.Relu_activate(x)
 
         return x
 
