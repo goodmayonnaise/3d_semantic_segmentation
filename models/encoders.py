@@ -92,10 +92,9 @@ class KSC2022(nn.Module):
     def forward(self, input, first_layer="ResNeSt"):
         if first_layer == "ResNeSt":
             
-            f1 = self.patch_layer1(input)
-            for _ in range(self.num_tf):
-                f1 = self.tfblock1(f1)
-            f1 = self.transform1(f1)
+            f1 = self.resnest.conv1(input)
+            f1 = self.resnest.bn1(f1)
+            f1 = self.resnest.relu(f1)
             
             f2 = self.resnest.maxpool(f1)
             f2 = self.resnest.layer1(f2)

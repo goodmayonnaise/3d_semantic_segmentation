@@ -40,7 +40,7 @@ if __name__ == "__main__":
     input_shape = (384//4, 1280//4) # 96 312
     criterion = FocalLosswithDiceRegularizer(reduction="mean") # setting loss 
       
-    epochs     = 500
+    epochs     = 5
     lr         = 1e-4
     momentum   = 0
     w_decay    = 1e-5
@@ -134,7 +134,7 @@ if __name__ == "__main__":
         print(f'\ntrain start time : {t_s}')
         train(epochs, train_loader, val_loader, model, optimizer, use_gpu, criterion, dataset,
               n_class, metrics, scheduler, writer_train, writer_val, early_stopping, device)
-        print(f'\n[train time information]\n\ttrain start time\t{t_s}\n\tend of train\t{datetime.now()}\n\ttotal train time\t{datetime.now()-t_s}')
+        print(f'\n[train time information]\n\ttrain start time\t{t_s}\n\tend of train\t\t{datetime.now()}\n\ttotal train time\t{datetime.now()-t_s}')
 
 
     elif phase == "test":
