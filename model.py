@@ -52,8 +52,8 @@ class KSC2022(nn.Module):
         self.num_cls = n_class
 
         self.encoder = KSC2022_2d(self.input_shape, self.fusion_lev)
-        self.decoder = TransUNet_Decorder(self.fusion_lev)
-        # self.decoder = TransUNet_101(self.fusion_lev)
+        # self.decoder = TransUNet_Decorder(self.fusion_lev)
+        self.decoder = TransUNet_101(self.fusion_lev)
         # self.decoder = MLA_add(self.num_cls)
         # self.decoder = MLA_cat(self.num_cls)
         # self.decoder = PUP()
@@ -63,11 +63,11 @@ class KSC2022(nn.Module):
 
     def forward(self, input):
 
-        f2, f3, f4, f5 = self.encoder(input, first_layer="ResNeSt")
+        f1, f2, f3, f4 = self.encoder(input, first_layer="ResNeSt")
         # f1, f2, f3, f4 = self.encoder(input, first_layer="segnext") 
 
 
-        x = self.decoder(f2, f3, f4, f5)
+        x = self.decoder(f1, f2, f3, f4)
         # x = self.decoder(f4)
         segment_out = F.softmax(self.Convolution(x), dim=1)
 

@@ -14,19 +14,19 @@ class KSC2022(nn.Module):
 
         # ResNeSt layer  -------------------------------------------------------------------------------------------------------------------------------
         # resnest 50 -----------------------------------------------------------
-        self.resnest = ResNeSt(Bottleneck, [3, 4, 6, 3], # ------------------ 2x1s64d
-                                radix=2, groups=1, bottleneck_width=64,
-                                deep_stem=True, stem_width=32, avg_down=True,
-                                avd=True, avd_first=False)
+        # self.resnest = ResNeSt(Bottleneck, [3, 4, 6, 3], # ------------------ 2x1s64d
+        #                         radix=2, groups=1, bottleneck_width=64,
+        #                         deep_stem=True, stem_width=32, avg_down=True,
+        #                         avd=True, avd_first=False)
         # self.resnest = ResNeSt(Bottleneck, [3, 4, 6, 3], # ------------------ 2x2s40d
         #                         radix=2, groups=2, bottleneck_width=40,
         #                         deep_stem=True, stem_width=32, avg_down=True,
         #                         avd=True, avd_first=False)
-        self.spartialattention_x1 = SpatialAttention(d_model=64)
-        self.spartialattention_x2 = SpatialAttention(d_model=256)
-        self.spartialattention_x3 = SpatialAttention(d_model=512)
-        self.spartialattention_x4 = SpatialAttention(d_model=1024)
-        self.spartialattention_x5 = SpatialAttention(d_model=2048)
+        # self.spartialattention_x1 = SpatialAttention(d_model=64)
+        # self.spartialattention_x2 = SpatialAttention(d_model=256)
+        # self.spartialattention_x3 = SpatialAttention(d_model=512)
+        # self.spartialattention_x4 = SpatialAttention(d_model=1024)
+        # self.spartialattention_x5 = SpatialAttention(d_model=2048)
 
         # # resnest 101 --------------------------------------------------------
         # self.resnest = ResNeSt(Bottleneck, [3, 4, 23, 3], # ------------------ 2x1s64d
@@ -53,17 +53,25 @@ class KSC2022(nn.Module):
         #                         radix=2, groups=1, bottleneck_width=64,
         #                         deep_stem=True, stem_width=64, avg_down=True,
         #                         avd=True, avd_first=False)
-        # self.resnest = ResNeSt(Bottleneck, [3, 30, 48, 8], # ------------------ 2x2s40d
-        #                         radix=2, groups=2, bottleneck_width=40,
-        #                         deep_stem=True, stem_width=64, avg_down=True,
-        #                         avd=True, avd_first=False)
+
+        self.resnest = ResNeSt(Bottleneck, [3, 30, 48, 8], # ------------------ 2x2s40d
+                                radix=4, groups=1, bottleneck_width=64,
+                                deep_stem=True, stem_width=64, avg_down=True,
+                                avd=True, avd_first=False)
         
-        # self.spartialattention_x1 = SpatialAttention(d_model=128)
-        # self.spartialattention_x2 = SpatialAttention(d_model=256)
-        # self.spartialattention_x3 = SpatialAttention(d_model=512)
-        # self.spartialattention_x4 = SpatialAttention(d_model=1024)
+        self.f1_k = [3, 5, 7, 9, 11]
+        self.f2_k = [3, 5, 7, 9]
+        self.f3_k = [3, 5, 11]
+        self.f4_k = [3, 5]
         
-        self.spartialattention = SpatialAttention(d_model=3)
+        self.spartialattention_x1 = SpatialAttention(d_model=128, k_scale=self.f1_k)
+        self.spartialattention_x2 = SpatialAttention(d_model=256, k_scale=self.f2_k)
+        self.spartialattention_x3 = SpatialAttention(d_model=512, k_scale=self.f3_k)
+        self.spartialattention_x4 = SpatialAttention(d_model=1024, k_scale=self.f4_k)
+        # self.spartialattention_x5 = SpatialAttention(d_model=2048)
+        
+        self.f_k = [3, 5, 7, 9, 11]
+        self.spartialattention = SpatialAttention(d_model=3, k_scale=self.f_k)
 
         # for SegFormer ------------------------------------------------------------------------------
         self.embed_dim = 512
@@ -107,16 +115,16 @@ class KSC2022(nn.Module):
             
             f4 = self.resnest.layer3(f3)
             
-            f5 = self.resnest.layer4(f4)
+            # f5 = self.resnest.layer4(f4)
             
-            # f1 = self.spartialattention_x1(f1)
-            f2 = self.spartialattention_x2(f2)
-            f3 = self.spartialattention_x3(f3)
-            f4 = self.spartialattention_x4(f4)
-            f5 = self.spartialattention_x5(f5)
+            f1 = self.spartialattention_x1(f1, k_size=len(self.f1_k))
+            f2 = self.spartialattention_x2(f2, k_size=len(self.f2_k))
+            f3 = self.spartialattention_x3(f3, k_size=len(self.f3_k))
+            f4 = self.spartialattention_x4(f4, k_size=len(self.f4_k))
+            # f5 = self.spartialattention_x5(f5)
 
         else: # segnext first
-            x = self.spartialattention(input)
+            x = self.spartialattention(input, k_size=len(self.f_k))
             f1, f2, f3, f4 = self.resnest(x)
         
-        return f2, f3, f4, f5
+        return f1, f2, f3, f4

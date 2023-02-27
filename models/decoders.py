@@ -99,6 +99,7 @@ class TransUNet_101(nn.Module):
 
         self.fusion_lev = fusion_lev
 
+        # self.deconv_0 = Deconv_TransUnet_Decorder(in_filters=2048, out_filters=1024)
         self.deconv_1 = Deconv_TransUnet_Decorder(in_filters=1024, out_filters=512)
         self.deconv_2 = Deconv_TransUnet_Decorder(in_filters=512*2, out_filters=256)
         self.deconv_3 = Deconv_TransUnet_Decorder(in_filters=256*2, out_filters=128) 
@@ -130,9 +131,9 @@ class TransUNet_101(nn.Module):
 
         # x = self.upsampling(x)     
         # x = self.conv_5(x)          
-        # x = self.batch_norm_5(x)   
+        # x = self.batch_norm(x)   
         # x = self.Dropout(x)              
-        # x = self.Relu_activate_5(x) 
+        # x = self.Relu_activate(x) 
 
         return x
 
