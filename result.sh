@@ -1,1 +1,1 @@
-watch -n 1 tail ./log/result.csv
+watch -n 1 tail -n 11 ./log/result.csv
