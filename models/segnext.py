@@ -25,9 +25,8 @@ class AttentionModule(nn.Module):
         attn_list = []
         for k in range(k_size):
             attn_list.append(self.attn_layers[k](attn))
-
+            
         attn = attn + sum(attn_list)
-        
         attn = self.conv(attn)
 
         return attn * u
@@ -40,7 +39,7 @@ class DilatedAttentionModule(nn.Module):
 
         self.attn_layers = []
         for k in k_size:
-            self.attn_layers(nn.Sequential(
+            self.attn_layers.append(nn.Sequential(
                 nn.Conv2d(dim, dim, (1, k), padding=(0, int((k-1)/2)), groups=dim, dilation=(int((k-1)/2), 1)),
                 nn.Conv2d(dim, dim, (k, 1), padding=(int((k-1)/2), 0), groups=dim, dilation=(1, int((k-1)/2)))
             ))
@@ -55,17 +54,7 @@ class DilatedAttentionModule(nn.Module):
         attn_list = []
         for k in range(k_size):
             attn_list.append(self.attn_layers[k](attn))
-        # attn0 = self.conv0_1(attn) # 256 64 127
-        # attn0 = self.conv0_2(attn0) # 256 63 127
-        # attn1 = self.conv1_1(attn)
-        # attn1 = self.conv1_2(attn1)
-        # attn2 = self.conv2_1(attn)
-        # attn2 = self.conv2_2(attn2)
-        # attn3 = self.conv3_1(attn)
-        # attn3 = self.conv3_2(attn3)
-        # attn4 = self.conv4_1(attn)
-        # attn4 = self.conv4_2(attn4)
-        # attn = attn + attn0 + attn1 + attn2 # + attn3 + attn4
+
         attn = attn + sum(attn_list)
         attn = self.conv(attn)
 
