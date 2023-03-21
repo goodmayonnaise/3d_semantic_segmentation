@@ -7,7 +7,7 @@ from torchinfo import summary as torchsummary
 
 from utils import set_device, load_weight
 from losses import FocalLosswithDiceRegularizer
-from model import KSC2022, KSC2022_Fusion, SalsaNeXt
+from model import KSC2022, KSC2022_Fusion, SalsaNeXt, DoubleUNet
 from DataLoaders.cityscapes import CityScapesDataset
 from DataLoaders.KITTI import load_data
 from DataLoaders.SemanticKITTI import load_semanticKITTI
@@ -90,7 +90,7 @@ if __name__ == "__main__":
         if dataset == "semantic_kitti":
             model = KSC2022_Fusion(input_shape=input_shape, fusion_lev=fusion_lev)
         else :
-            model = SalsaNeXt(n_class)
+            model = DoubleUNet(n_class)
 
         if phase == "transfer_learning":
             model = load_weight(ckpt_dir=pretrained_model, model=model, device=device)

@@ -1,10 +1,67 @@
 from modules import Concatenate
 from models.salsanext import UpBlock
+from models.doubleunet import *
 
 import torch
 import torch.nn as nn
 import torchvision.transforms.functional as TransFunc 
 
+
+class DoubleUNet1(nn.Module):
+    def __init__(self) -> None:
+        super(DoubleUNet1, self).__init__()
+        self.up = nn.Upsample(scale_factor=2, mode='bilinear')
+        self.dec4 = VGGBlock(1024, 256, 256, False)
+        self.dec3 = VGGBlock(512, 128, 128, False)
+        self.dec2 = VGGBlock(256, 64, 64, False)
+        self.dec1 = VGGBlock(128, 32, 32, False)
+        self.output = output_block()
+
+    def forward(self, y_aspp, y_enc4, y_enc3, y_enc2, y_enc1):
+        y_dec4 = self.up(y_aspp)
+        y_dec4 = self.dec4(torch.cat([y_enc4, y_dec4], 1))
+        y_dec3 = self.up(y_dec4)
+        y_dec3 = self.dec3(torch.cat([y_enc3, y_dec3], 1))
+        y_dec2 = self.up(y_dec3)
+        y_dec2 = self.dec2(torch.cat([y_enc2, y_dec2], 1))
+        y_dec1 = self.up(y_dec2)
+        y_dec1 = self.dec1(torch.cat([y_enc1, y_dec1], 1))
+        y_dec0 = self.up(y_dec1)
+
+        output = self.output(y_dec0)
+        
+        return output
+
+
+class DoubleUNet2(nn.Module):
+    def __init__(self) -> None:
+        super(DoubleUNet2, self).__init__()
+        self.up = nn.Upsample(scale_factor=2, mode='bilinear')
+
+        self.dec4 = VGGBlock(1536, 256, 256, False, True)
+        self.dec3 = VGGBlock(768, 128, 128, False, True)
+        self.dec2 = VGGBlock(384, 64, 64, False, True)
+        self.dec1 = VGGBlock(192, 32, 32, False, True)
+
+        self.output = output_block()
+
+    def forward(self, y_aspp, y_enc4, y_enc3, y_enc2, y_enc1):
+        # decoder of 2nd unet
+        y_dec4 = self.up(y_aspp)
+        y_dec4 = self.dec4(torch.cat([y_enc4, y_enc4, y_dec4], 1))
+        y_dec3 = self.up(y_dec4)
+        y_dec3 = self.dec3(torch.cat([y_enc3, y_enc3, y_dec3], 1))
+        y_dec2 = self.up(y_dec3)
+        y_dec2 = self.dec2(torch.cat([y_enc2, y_enc2, y_dec2], 1))
+        y_dec1 = self.up(y_dec2)
+        y_dec1 = self.dec1(torch.cat([y_enc1, y_enc1, y_dec1], 1))
+        y_dec0 = self.up(y_dec1)
+
+        # output of 2nd unet
+        output = self.output(y_dec0)
+        
+        return output
+    
 
 class SalsaNeXt(nn.Module):
     def __init__(self, nclasses):

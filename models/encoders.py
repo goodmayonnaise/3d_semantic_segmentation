@@ -4,6 +4,66 @@ from models.salsanext import ResContextBlock, ResBlock
 from models.resnest import ResNeSt,  Bottleneck
 from models.segnext import SpatialAttention
 from models.segformer import *
+from models.doubleunet import *
+
+
+class DoubleUNet(nn.Module):
+    def __init__(self, phase="1st"):
+        super(DoubleUNet, self).__init__()
+        if phase == "1st":
+            self.enc1 = VGGBlock(3, 64, 64, True)
+            self.enc2 = VGGBlock(64, 128, 128, True)
+            self.enc3 = VGGBlock(128, 256, 256, True)
+            self.enc4 = VGGBlock(256, 512, 512, True)
+            self.enc5 = VGGBlock(512, 512, 512, True)
+            
+            # apply pretrained vgg19 weights on 1st unet
+            vgg19 = torch.hub.load('pytorch/vision:v0.10.0', 'vgg19_bn', pretrained=True)
+            
+            self.enc1.conv1.weights = vgg19.features[0].weight
+            self.enc1.bn1.weights = vgg19.features[1].weight
+            self.enc1.conv2.weights = vgg19.features[3].weight
+            self.enc1.bn2.weights = vgg19.features[4].weight
+            self.enc2.conv1.weights = vgg19.features[7].weight
+            self.enc2.bn1.weights = vgg19.features[8].weight
+            self.enc2.conv2.weights = vgg19.features[10].weight
+            self.enc2.bn2.weights = vgg19.features[11].weight
+            self.enc3.conv1.weights = vgg19.features[14].weight
+            self.enc3.bn1.weights = vgg19.features[15].weight
+            self.enc3.conv2.weights = vgg19.features[17].weight
+            self.enc3.bn2.weights = vgg19.features[18].weight
+            self.enc4.conv1.weights = vgg19.features[27].weight
+            self.enc4.bn1.weights = vgg19.features[28].weight
+            self.enc4.conv2.weights = vgg19.features[30].weight
+            self.enc4.bn2.weights = vgg19.features[31].weight
+            self.enc5.conv1.weights = vgg19.features[33].weight
+            self.enc5.bn1.weights = vgg19.features[34].weight
+            self.enc5.conv2.weights = vgg19.features[36].weight
+            self.enc5.bn2.weights = vgg19.features[37].weight
+            del vgg19
+            
+        elif phase == "2nd":
+            self.enc1 = VGGBlock(3, 64, 64, True, True)
+            self.enc2 = VGGBlock(64, 128, 128, True, True)
+            self.enc3 = VGGBlock(128, 256, 256, True, True)
+            self.enc4 = VGGBlock(256, 512, 512, True, True)
+            self.enc5 = VGGBlock(512, 512, 512, True, True)
+
+        self.aspp = ASPP(512, 512)
+        
+    def forward(self, x):
+        y_enc1 = self.enc1(x)
+        y_enc2 = self.enc2(y_enc1)
+        y_enc3 = self.enc3(y_enc2)
+        y_enc4 = self.enc4(y_enc3)
+        y_enc5 = self.enc5(y_enc4)
+
+        # aspp bridge
+        y_aspp = self.aspp(y_enc5)
+        
+        return y_aspp, y_enc4, y_enc3, y_enc2, y_enc1
+
+
 
 class SalsaNext(nn.Module):
     def __init__(self):

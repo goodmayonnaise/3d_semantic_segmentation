@@ -17,7 +17,6 @@ class ResContextBlock(nn.Module):
 
 
     def forward(self, x):
-
         shortcut = self.conv1(x)
         shortcut = self.act1(shortcut)
 

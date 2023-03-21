@@ -5,13 +5,46 @@
 from models.encoders import KSC2022 as KSC2022_2d
 from models.encoders import Segformer_Encorder
 from models.encoders import SalsaNext as salsa_encoder
+from models.encoders import DoubleUNet as dunet_encoder
+
 from models.decoders import * 
 from models.decoders import SalsaNeXt as salsa_decoder 
+from models.decoders import DoubleUNet1, DoubleUNet2
+
 from models.encoders_fusion import KSC2022 as KSC2022_fusion
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+
+class DoubleUNet(nn.Module):
+    def __init__(self):
+        super(DoubleUNet, self).__init__()
+        
+        self.encoder1 = dunet_encoder("1st")
+        self.decoder1 = DoubleUNet1()
+
+        self.encoder2 = dunet_encoder("2nd") 
+        self.decoder2 = DoubleUNet2()           
+                
+    def forward(self, x):
+        # encoder of 1st unet 
+        y_aspp1, y_enc1_4, y_enc1_3, y_enc1_2, y_enc1_1 = self.encoder1(x)
+        
+        # output of 1st unet
+        output1 = self.decoder1(y_aspp1, y_enc1_4, y_enc1_3, y_enc1_2, y_enc1_1)
+
+        # multiply input and output of 1st unet
+        mul_output1 = x * output1
+
+        # encoder of 2nd unet
+        y_aspp2, y_enc2_4, y_enc2_3, y_enc2_2, y_enc2_1 = self.encoder2(mul_output1)
+
+        # decoder of 2nd unet
+        output2 = self.decoder2(y_aspp2, y_enc2_4, y_enc2_3, y_enc2_2, y_enc2_1)
+
+        return output1, output2
 
 
 class SalsaNeXt(nn.Module):
@@ -32,9 +65,6 @@ class SalsaNeXt(nn.Module):
         
         return logits
     
-    
-    
-
 class KSC2022_Fusion(nn.Module):
     def __init__(self, input_shape, fusion_lev):
         super(KSC2022_Fusion, self).__init__()
@@ -118,18 +148,18 @@ class KSC2022_segformer(nn.Module): # for fusion
         return segment_out
 
 if __name__ == "__main__":
-    model = KSC2022(input_shape=(384//4, 1280//4), fusion_lev="none", n_class=20)
+    model = DoubleUNet()
     from torchsummaryX import summary
-    summary(model, torch.rand((5, 3, 384//4, 1280//4)))    
-    from torchinfo import summary
-    summary(model, (5, 3, 384//4, 1280//4))    
+    summary(model, torch.rand((40, 3, 384//4, 1280//4)))    
+    # from torchinfo import summary
+    # summary(model, (5, 3, 384//4, 1280//4))    
     
 
-    # visualized model 
-    from torchviz import make_dot
-    from torch.autograd import Variable
-    x = Variable(torch.randn((5, 3, 384//4, 1280//4))).cuda()
-    make_dot(model(x), params=dict(model.named_parameters())).render("graph", format="png")
+    # # visualized model 
+    # from torchviz import make_dot
+    # from torch.autograd import Variable
+    # x = Variable(torch.randn((5, 3, 384//4, 1280//4))).cuda()
+    # make_dot(model(x), params=dict(model.named_parameters())).render("graph", format="png")
 
 
     # model = KSC2022_Fusion(input_shape=(384//4, 1280//4), fusion_lev="mid_stage2")
