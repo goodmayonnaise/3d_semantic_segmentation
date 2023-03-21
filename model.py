@@ -4,12 +4,36 @@
 
 from models.encoders import KSC2022 as KSC2022_2d
 from models.encoders import Segformer_Encorder
+from models.encoders import SalsaNext as salsa_encoder
 from models.decoders import * 
+from models.decoders import SalsaNeXt as salsa_decoder 
 from models.encoders_fusion import KSC2022 as KSC2022_fusion
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+
+class SalsaNeXt(nn.Module):
+    def __init__(self, n_class):
+        super(SalsaNeXt, self).__init__()
+        self.n_class = n_class
+        self.encoder = salsa_encoder()
+        self.decoder = salsa_decoder(self.n_class) 
+        
+        
+    def forward(self, x):
+        
+        down0b, down1b, down2b, down3b, down5c  = self.encoder(x)
+        
+        logits = self.decoder(down0b, down1b, down2b, down3b, down5c )
+        
+        logits = F.softmax(logits, dim=1)
+        
+        return logits
+    
+    
+    
 
 class KSC2022_Fusion(nn.Module):
     def __init__(self, input_shape, fusion_lev):

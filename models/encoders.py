@@ -1,9 +1,36 @@
 import torch.nn as nn
+
+from models.salsanext import ResContextBlock, ResBlock
 from models.resnest import ResNeSt,  Bottleneck
 from models.segnext import SpatialAttention
-from modules import Concatenate
 from models.segformer import *
 
+class SalsaNext(nn.Module):
+    def __init__(self):
+        super(SalsaNext, self).__init__()
+
+        self.downCntx = ResContextBlock(3, 32)
+        self.downCntx2 = ResContextBlock(32, 32)
+        self.downCntx3 = ResContextBlock(32, 32)
+
+        self.resBlock1 = ResBlock(32, 2 * 32, 0.2, pooling=True, drop_out=False)
+        self.resBlock2 = ResBlock(2 * 32, 2 * 2 * 32, 0.2, pooling=True)
+        self.resBlock3 = ResBlock(2 * 2 * 32, 2 * 4 * 32, 0.2, pooling=True)
+        self.resBlock4 = ResBlock(2 * 4 * 32, 2 * 4 * 32, 0.2, pooling=True)
+        self.resBlock5 = ResBlock(2 * 4 * 32, 2 * 4 * 32, 0.2, pooling=False)
+
+    def forward(self, x):
+        downCntx = self.downCntx(x)             # 40    32  96  320
+        downCntx = self.downCntx2(downCntx)     # 40    32  96  320
+        downCntx = self.downCntx3(downCntx)     # 40    32  96  320
+
+        down0c, down0b = self.resBlock1(downCntx)
+        down1c, down1b = self.resBlock2(down0c)
+        down2c, down2b = self.resBlock3(down1c)
+        down3c, down3b = self.resBlock4(down2c)
+        down5c = self.resBlock5(down3c)
+
+        return down0b, down1b, down2b, down3b, down5c 
 
 class KSC2022(nn.Module): 
     def __init__(self, input_shape, fusion_lev):
@@ -120,3 +147,4 @@ class KSC2022(nn.Module):
             f1, f2, f3, f4 = self.resnest(x)
         
         return f2, f3, f4, f5
+
