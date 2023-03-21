@@ -1,2 +1,10 @@
-# 3d_semantic_segmentation
-# create by jeonjiyeon 
+* ResNeSt
+* TransU-Net 
+* Inception module
+* MSCA(Multi-scale Channel Attention)
+* SE block 
+* VGG block
+* ASPP 
+* DoubleU-Net 
+* SalsaNeXt
+
