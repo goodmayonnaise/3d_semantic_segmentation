@@ -3,8 +3,8 @@ import torch
 import torch.nn as nn
 
 
-class inceptionV1(nn.Module):
-    def __init__(self, in_dim, out_dim1, mid_dim3, out_dim3, mid_dim5, out_dim5, pool):
+class inceptionV1(nn.Module): 
+    def __init__(self, in_dim, out_dim1=64, mid_dim3=96, out_dim3=128, mid_dim5=16, out_dim5=32, pool=32):
         super(inceptionV1, self).__init__()
         self.split1 = self.conv1(in_dim, out_dim1)
         self.split2 = self.conv1_3(in_dim, mid_dim3, out_dim3)
@@ -239,7 +239,7 @@ class inception_C(nn.Module):
 if __name__ == "__main__":
     
     f = torch.randn([5, 3, 96, 320])
-    inceptionv1 = inceptionV1(3, 64, 96, 128, 16, 32, 32)
+    inceptionv1 = inceptionV1(in_dim=3)
     inceptionA = inception_A(in_dim=3)
     inceptionB = inception_B(in_dim=3)
     inceptionC = inception_C(in_dim=3)
