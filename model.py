@@ -10,7 +10,9 @@ from models.encoders import DoubleUNet as dunet_encoder
 from models.decoders import * 
 from models.decoders import SalsaNeXt as salsa_decoder 
 from models.decoders import DoubleUNet1, DoubleUNet2
+from models.decoders import DoubleU_ResNeSt1, DoubleU_ResNeSt2
 
+from models.resnest import ResNeSt
 from models.encoders_fusion import KSC2022 as KSC2022_fusion
 
 import torch
@@ -18,15 +20,78 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+
+class DoubleU_SalsaNeXt(nn.Module):
+    def  __init__(self):
+        super(DoubleU_SalsaNeXt, self).__init__()
+        
+        
+    def foward(self, x):
+        
+        
+        return 
+
+class DoubleU_ResNeSt(nn.Module):
+    def  __init__(self, n_class):
+        super(DoubleU_ResNeSt, self).__init__()
+        
+        self.resnest = torch.hub.load('zhanghang1989/ResNeSt', 'resnest269', pretrained=False)
+        from models.doubleunet import ASPP
+        self.aspp = ASPP(2048, 2048)
+        self.decoder1 = DoubleU_ResNeSt1()
+        self.decoder2 = DoubleU_ResNeSt2()
+        self.conv11 = nn.Conv2d(6, n_class, 1)
+
+    def encoder(self, x):
+        f1 = self.resnest.conv1(x)
+        f1 = self.resnest.bn1(f1)
+        f1 = self.resnest.relu(f1)
+        
+        f2 = self.resnest.maxpool(f1)
+        f2 = self.resnest.layer1(f2)
+        
+        f3 = self.resnest.layer2(f2)
+        f4 = self.resnest.layer3(f3)
+        f5 = self.resnest.layer4(f4)        
+        
+        return f1, f2, f3, f4, f5 
+        
+        
+    def forward(self, x):
+        # encoder1
+        f1, f2, f3, f4, f5 = self.encoder(x)
+
+        f5 = self.aspp(f5)
+
+        # decoder1
+        output1 = self.decoder1(f5, f4, f3, f2, f1)
+
+        # multiply input and output of 1st unet
+        mul_output1 = x * output1 
+        
+        # encoder2 
+        f11, f22, f33, f44, f55 = self.encoder(mul_output1)
+        
+        # decoder of 2nd unet
+        output2 = self.decoder2(f55, f4, f44, f3, f33, f2, f22, f1, f11)
+        
+        output = torch.cat([output1, output2], 1)
+        
+        return output
+
+
+
 class DoubleUNet(nn.Module):
-    def __init__(self):
+    def __init__(self, n_class):
         super(DoubleUNet, self).__init__()
         
         self.encoder1 = dunet_encoder("1st")
         self.decoder1 = DoubleUNet1()
 
         self.encoder2 = dunet_encoder("2nd") 
-        self.decoder2 = DoubleUNet2()           
+        self.decoder2 = DoubleUNet2()        
+        
+        self.conv11 = nn.Conv2d(6, n_class, 1)   
                 
     def forward(self, x):
         # encoder of 1st unet 
@@ -43,8 +108,11 @@ class DoubleUNet(nn.Module):
 
         # decoder of 2nd unet
         output2 = self.decoder2(y_aspp2, y_enc2_4, y_enc2_3, y_enc2_2, y_enc2_1)
+        
+        output = self.conv11(torch.cat([output1, output2], 1))
 
-        return output1, output2
+        return output
+
 
 
 class SalsaNeXt(nn.Module):
@@ -148,7 +216,7 @@ class KSC2022_segformer(nn.Module): # for fusion
         return segment_out
 
 if __name__ == "__main__":
-    model = DoubleUNet()
+    model = DoubleUNet(20)
     from torchsummaryX import summary
     summary(model, torch.rand((40, 3, 384//4, 1280//4)))    
     # from torchinfo import summary

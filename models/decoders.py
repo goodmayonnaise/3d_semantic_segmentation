@@ -7,6 +7,61 @@ import torch.nn as nn
 import torchvision.transforms.functional as TransFunc 
 
 
+class DoubleU_ResNeSt1(nn.Module):
+    def __init__(self) -> None:
+        super(DoubleU_ResNeSt1, self).__init__()
+        self.up = nn.Upsample(scale_factor=2, mode='bilinear')
+        self.dec4 = VGGBlock(2048+1024, 512, 512, False)
+        self.dec3 = VGGBlock(512*2, 256, 256, False)
+        self.dec2 = VGGBlock(256*2, 128, 128, False)
+        self.dec1 = VGGBlock(128*2, 48, 48, False)
+        self.output = output_block(48)
+
+    def forward(self,f5, f4, f3, f2, f1):
+        d4 = self.up(f5)
+        d4 = self.dec4(torch.cat([f4, d4], 1))
+        d3 = self.up(d4)
+        d3 = self.dec3(torch.cat([f3, d3], 1))
+        d2 = self.up(d3)
+        d2 = self.dec2(torch.cat([f2, d2], 1))
+        d1 = self.up(d2)
+        d1 = self.dec1(torch.cat([f1, d1], 1))
+        d0 = self.up(d1)
+
+        output = self.output(d0)
+        
+        return output
+
+
+class DoubleU_ResNeSt2(nn.Module):
+    def __init__(self) -> None:
+        super(DoubleU_ResNeSt2, self).__init__()
+        self.up = nn.Upsample(scale_factor=2, mode='bilinear')
+
+        self.dec4 = VGGBlock(2048+1024*2, 512, 512, False, True)
+        self.dec3 = VGGBlock(512*3, 256, 256, False, True)
+        self.dec2 = VGGBlock(256*3, 128, 128, False, True)
+        self.dec1 = VGGBlock(128*3, 32, 32, False, True)
+
+        self.output = output_block(32)
+
+    def forward(self, f55, f4, f44, f3, f33, f2, f22, f1, f11):
+        d4 = self.up(f55)
+        d4 = self.dec4(torch.cat([f4, f44, d4], 1))
+        d3 = self.up(d4)
+        d3 = self.dec3(torch.cat([f3, f33, d3], 1))
+        d2 = self.up(d3)
+        d2 = self.dec2(torch.cat([f2, f22, d2], 1))
+        d1 = self.up(d2)
+        d1 = self.dec1(torch.cat([f1, f11, d1], 1))
+        d0 = self.up(d1)
+
+        # output of 2nd unet
+        output = self.output(d0)
+        
+        return output
+
+
 class DoubleUNet1(nn.Module):
     def __init__(self) -> None:
         super(DoubleUNet1, self).__init__()
@@ -15,7 +70,7 @@ class DoubleUNet1(nn.Module):
         self.dec3 = VGGBlock(512, 128, 128, False)
         self.dec2 = VGGBlock(256, 64, 64, False)
         self.dec1 = VGGBlock(128, 32, 32, False)
-        self.output = output_block()
+        self.output = output_block(32)
 
     def forward(self, y_aspp, y_enc4, y_enc3, y_enc2, y_enc1):
         y_dec4 = self.up(y_aspp)
@@ -43,7 +98,7 @@ class DoubleUNet2(nn.Module):
         self.dec2 = VGGBlock(384, 64, 64, False, True)
         self.dec1 = VGGBlock(192, 32, 32, False, True)
 
-        self.output = output_block()
+        self.output = output_block(32)
 
     def forward(self, y_aspp, y_enc4, y_enc3, y_enc2, y_enc1):
         # decoder of 2nd unet
