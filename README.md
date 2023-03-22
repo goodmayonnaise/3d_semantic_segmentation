@@ -5,6 +5,6 @@
 * SE block 
 * VGG block
 * ASPP 
-* DoubleU-Net 
 * SalsaNeXt
-
+* DoubleU-Net 
+* DoubleU-ResNeSt
