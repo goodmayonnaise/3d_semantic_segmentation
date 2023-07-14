@@ -8,7 +8,8 @@
 * SalsaNeXt
 * DoubleU-Net 
 * DoubleU-ResNeSt
-* SC-UNet - LiDAR point cloud data to RGB
+* SC-UNet
+  - LiDAR point cloud data to RGB
 
 
 -----------------------------------------------------------------
