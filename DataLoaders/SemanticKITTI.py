@@ -1,34 +1,48 @@
 
-import os, cv2 
+import os, cv2, yaml
 import numpy as np 
 from glob import glob 
 from einops import rearrange
+
+from data_loader.laserscan import LaserScan
+# from laserscan import LaserScan
+
 import torch
-
-from utils import load_config
-
-from torch.utils.data import Dataset, DataLoader, random_split
-from torch.nn.functional import one_hot
+from torch.utils.data import Dataset
 
 
-class SemnaticKITTI(Dataset):
-    def __init__(self, input_file_pathes, label_file_pathes, input_shape, swap_dict, num_cls, train_phase=True, **kwargs):
-        # super(Dataset,self).__init__(**kwargs)
+class SemanticKITTI(Dataset):
+    def __init__(self, data_path, shape, nclasses, mode, front, **kwargs):
+        CFG = self.load_config()
+        self.swap_dict = CFG['learning_map']
+        sequences = CFG['split'][mode]
+        self.sequences = [str(i).zfill(2) for i in sequences]
+        self.path = self.data_path_load(self.sequences, data_path)
+        self.opendata = LaserScan(front=front, project=True, sem_color_dict=CFG['color_map'])
+
+        self.mode = mode
+        self.nclasses = nclasses
+        self.input_shape = shape     
         
-        self.image2_pathes = input_file_pathes[0]
-        self.remission_pathes = input_file_pathes[-1]
-        self.depth_pathes = label_file_pathes[0]
-        self.label_pathes = label_file_pathes[-1]
-        self.swap_dict = swap_dict
-        self.num_cls = num_cls
-        self.input_shape = input_shape     
-        self.train_phase = train_phase
-        # self.on_epoch_end()    
+        self.pcd_paths = self.path[0]
+        self.label_paths = self.path[1]
+        self.img_paths = self.path[2]
 
-    def replace_with_dict(self, ar, dic):
+    def load_config(self):
+        cfg_path = '/vit-adapter-kitti/jyjeon/data_loader/semantic-kitti.yaml'
+        try:
+            print("Opening config file %s" % cfg_path)
+            CFG = yaml.safe_load(open(cfg_path, 'r'))
+        except Exception as e:
+            print(e)
+            print("Error opening yaml file.")
+            quit()
+        return CFG
+
+    def replace_with_dict(self, ar):
         # Extract out keys and values
-        k = np.array(list(dic.keys()))
-        v = np.array(list(dic.values()))
+        k = np.array(list(self.swap_dict.keys()))
+        v = np.array(list(self.swap_dict.values()))
 
         # Get argsort indices
         sidx = k.argsort()
@@ -40,92 +54,81 @@ class SemnaticKITTI(Dataset):
         return v[sidx[np.searchsorted(k,ar,sorter=sidx)]]     
 
     def __len__(self):
-        return len(self.image2_pathes)
+        return len(self.pcd_paths)
 
     def __getitem__(self, idx):
+        x, y, img = self.pcd_paths[idx], self.label_paths[idx], self.img_paths[idx]
+        x, y = self.opendata.set_data(x, y)
 
-        x_img = self.image2_pathes[idx]
-        x_img = cv2.imread(x_img)
-        x_img = np.array(x_img)
-        x_img = cv2.resize(x_img, (self.input_shape[1], self.input_shape[0]))
-        x_img = torch.FloatTensor(x_img)
-        x_img = rearrange(x_img, 'h w c -> c h w')
+        rem, depth, mask = x['remission'], x['range'], x['mask']
+        rem = torch.FloatTensor(rem)
+        rem = torch.unsqueeze(rem, 0)
 
-        x_rem = self.remission_pathes[idx]
-        x_rem = np.load(x_rem)
-        x_rem = np.array(x_rem)
-        x_rem = cv2.resize(x_rem, (self.input_shape[1], self.input_shape[0]))
-        x_rem = np.expand_dims(x_rem, axis=-1)
-        x_rem = torch.FloatTensor(x_rem)
-        x_rem = rearrange(x_rem, 'h w c -> c h w')
+        pad_rem = torch.FloatTensor(x['pad_remission'])
+        pad_rem = torch.unsqueeze(pad_rem,0)
+        # rdm = np.stack((rem, depth, mask), axis=0) 
+        # rdm = torch.FloatTensor(rdm)
 
-        y_img = self.label_pathes[idx]
-        y_img = np.load(y_img)
-        y_img = self.replace_with_dict(y_img, self.swap_dict)
-        y_img = cv2.resize(y_img, (self.input_shape[1], self.input_shape[0]), interpolation=cv2.INTER_NEAREST)
-        y_img = torch.from_numpy(y_img).float()
-        y_img = one_hot(y_img.to(torch.int64), num_classes=self.num_cls)
-        y_img = np.array(y_img)
-        y_img = torch.FloatTensor(y_img)
-        y_img = rearrange(y_img, 'h w c -> c h w')
+        # for img
+        img = cv2.imread(img)
+        img = cv2.resize(img, (self.input_shape[1], self.input_shape[0]))
+        img = rearrange(img, 'h w c -> c h w')
+        img = torch.FloatTensor(img)
 
-        y_rem = self.depth_pathes[idx]
-        y_rem = np.load(y_rem)
-        y_rem = cv2.resize(y_rem, (self.input_shape[1], self.input_shape[0]))
-        y_rem = np.expand_dims(y_rem, axis=-1)
-        y_rem = torch.FloatTensor(y_rem)
-        y_rem = rearrange(y_rem, 'h w c -> c h w')
+        y = torch.FloatTensor(y['label'])
+        h, w = y.shape 
+        y_class = torch.zeros(self.nclasses, h, w)
+        for c in range(self.nclasses):
+            y_class[c] = (y==c).type(torch.int32).clone().detach()
 
-        return {'X':x_img, 'X_rem':x_rem, 'Y':y_img, 'Y_rem':y_rem}
+        return {'img': img, 'label':y_class, 'rgb_label':y, 'rem':rem, 'pad_rem':pad_rem}
+
+    def data_path_load(self, sequences, data_path): 
+        img_paths = [os.path.join(data_path, sequence_num, "image_2") for sequence_num in sequences]
+        pcd_paths = [os.path.join(data_path, sequence_num, "velodyne") for sequence_num in sequences]
+        label_paths = [os.path.join(data_path, sequence_num, "labels") for sequence_num in sequences]
+        
+        pcd_names, label_names, img_names = [], [], []
+
+        for pcd_path, label_path, img_path in zip(pcd_paths, label_paths, img_paths):    
+            pcd_names = pcd_names + glob(str(os.path.join(os.path.expanduser(pcd_path),"*.bin")))
+            label_names = label_names + glob(str(os.path.join(os.path.expanduser(label_path),"*.label")))
+            img_names = img_names + glob(str(os.path.join(os.path.expanduser(img_path),"*.png")))
+
+        pcd_names.sort()
+        label_names.sort()
+        img_names.sort()
+
+        return pcd_names, label_names, img_names
 
 
-def data_path_load(sequences, data_path): 
+if __name__ == "__main__":
 
-    image2_paths = [os.path.join(data_path, sequence_num, "image_2") for sequence_num in sequences]
-    remission_paths = [os.path.join(data_path, sequence_num, "projection_front", "remission") for sequence_num in sequences]
-    depth_paths = [os.path.join(data_path, sequence_num, "projection_front", "depth") for sequence_num in sequences]
-    sem_label_paths = [os.path.join(data_path, sequence_num, "label_projection_front", "sem_label") for sequence_num in sequences]
+    def load_config():
+        cfg_path = '/vit-adapter-kitti/jyjeon/data_loader/semantic-kitti.yaml'
+        try:
+            print("Opening config file %s" % "config/semantic-kitti.yaml")
+            import yaml
+            CFG = yaml.safe_load(open(cfg_path, 'r'))
+        except Exception as e:
+            print(e)
+            print("Error opening yaml file.")
+            quit()
+        return CFG
+
+    data_path = '/vit-adapter-kitti/data/semantic_kitti/kitti/dataset/sequences'
+    shape = (256, 1024)
+    mode = "train"
+    nclasses = 20 
+    batch_size = 1
+    dataset = SemanticKITTI(data_path, shape, nclasses, mode)
+    from laserscan import LaserScan
+    from torch.utils.data import DataLoader
+    import cv2, torch 
+    loader = DataLoader(dataset, batch_size, num_workers=1)
     
-    image2_names = list()
-    remission_names = list()
-    depth_names = list()
-    sem_label_names = list()
-
-    for image2_path, remission_path, depth_path, sem_label_path in zip(image2_paths, remission_paths, depth_paths, sem_label_paths):    
-        image2_names = image2_names + glob(str(os.path.join(os.path.expanduser(image2_path),"*.png")))
-        remission_names = remission_names + glob(str(os.path.join(os.path.expanduser(remission_path),"*.npy")))
-        depth_names = depth_names + glob(str(os.path.join(os.path.expanduser(depth_path),"*.npy")))
-        sem_label_names = sem_label_names + glob(str(os.path.join(os.path.expanduser(sem_label_path),"*.npy")))
-
-    image2_names.sort()
-    remission_names.sort()
-    depth_names.sort()
-    sem_label_names.sort()
-
-    return image2_names, remission_names, depth_names, sem_label_names
-
-
-def load_semanticKITTI(batch_size, phase, data_path, num_workers, input_shape):
-
-    CFG = load_config()
-    learning_map = CFG['learning_map']
-    sequences = CFG['split'][phase]
-    sequences = [str(i).zfill(2) for i in sequences]
-
-    image2_paths, remission_paths, depth_paths, sem_label_paths = data_path_load(sequences, data_path=data_path)  
-
-    dataset = SemnaticKITTI(input_file_pathes=[image2_paths,remission_paths], 
-                            label_file_pathes=[depth_paths,sem_label_paths], 
-                            input_shape=input_shape,
-                            swap_dict=learning_map, 
-                            num_cls=20, 
-                            train_phase=True) # x_img, x_rem, y_img, y_rem
-
-    dataset_size = len(dataset)
-    train_size = int(dataset_size*0.8)
-    val_size = dataset_size - train_size
-    train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
-    train_loader = DataLoader(train_dataset, num_workers=num_workers, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, num_workers=num_workers, batch_size=batch_size, shuffle=True)
-
-    return train_loader, val_loader
+    for iter, batch in enumerate(loader):
+        
+        print()
+        
+    
