@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import numpy as np
+import cv2
 
 
 class LaserScan:
@@ -96,8 +97,47 @@ class LaserScan:
 
   def __len__(self):
     return self.size()
+  
+  def read_calib(self, calib_path):
+      """
+      :param calib_path: Path to a calibration text file.
+      :return: dict with calibration matrices.
+      """
+      calib_all = {}
+      with open(calib_path, 'r') as f:
+          for line in f.readlines():
+              if line == '\n':
+                  break
+              key, value = line.split(':', 1)
+              calib_all[key] = np.array([float(x) for x in value.split()])
 
-  def open_scan(self, filename):
+      # reshape matrices
+      calib_out = {}
+      calib_out['P2'] = calib_all['P2'].reshape(3, 4)  # 3x4 projection matrix for left camera
+      calib_out['Tr'] = np.identity(4)  # 4x4 matrix
+      calib_out['Tr'][:3, :4] = calib_all['Tr'].reshape(3, 4)
+
+      return calib_out
+
+  def select_points_in_frustum(self, points_2d, x1, y1, x2, y2):
+      """
+      Select points in a 2D frustum parametrized by x1, y1, x2, y2 in image coordinates
+      :param points_2d: point cloud projected into 2D
+      :param points_3d: point cloud
+      :param x1: left bound
+      :param y1: upper bound
+      :param x2: right bound
+      :param y2: lower bound
+      :return: points (2D and 3D) that are in the frustum
+      """
+      keep_ind = (points_2d[:, 0] > x1) * \
+                  (points_2d[:, 1] > y1) * \
+                  (points_2d[:, 0] < x2) * \
+                  (points_2d[:, 1] < y2)
+
+      return keep_ind
+
+  def open_scan(self, filename, calib=None):
     """ Open raw scan and fill in attributes
     """
     # reset just in case there was an open structure
@@ -119,6 +159,12 @@ class LaserScan:
     # put in attribute
     points = scan[:, 0:3]    # get xyz
     remissions = scan[:, 3]  # get remission
+
+    if calib != None:
+      calib = self.read_calib(calib)
+      proj_matrix = np.matmul(calib["P2"], calib["Tr"])
+      self.proj_matrix = proj_matrix
+
     return self.set_points(points, remissions)
 
   def set_points(self, points, remissions=None):
@@ -168,11 +214,20 @@ class LaserScan:
     
     if self.front:
       keep_idx = self.points[:,0] > 0
-      self.points = self.points[keep_idx]
+      self.points = self.points[keep_idx] # x y z
+      # points_hcoords = np.concatenate([self.points, np.ones([keep_idx.sum(),1], dtype=np.float32)], axis=1) # x y z 1
+      # img_points =(self.proj_matrix @ points_hcoords.T).T
+      # img_points = img_points[:, :2] / np.expand_dims(img_points[:, 2], axis=1)  # scale 2D points
+      # keep_idx_img_pts = self.select_points_in_frustum(img_points, 0, 0, self.proj_W, self.proj_H) # size down 
+      # img_points = np.fliplr(img_points)
+
+      # points_img = img_points[keep_idx_img_pts] # proj x, proj y 
+      # proj_y, proj_x = points_img[:,0], points_img[:,1]
+      # depth = np.linalg.norm(self.points, 2, axis=1) # 12466(N)
+      # depth = depth[keep_idx_img_pts]
 
     # get depth of all points
     depth = np.linalg.norm(self.points, 2, axis=1) # 12466(N)
-
 
     # get scan components
     scan_x = self.points[:, 0]
@@ -188,9 +243,12 @@ class LaserScan:
     proj_y = 1.0 - (pitch + abs(fov_down)) / fov        # in [0.0, 1.0]
 
     # scale to image size using angular resolution
-    proj_x *= self.proj_W                              # in [0.0, W]
-    proj_y *= self.proj_H                              # in [0.0, H]
-
+    # proj_x *= self.proj_W                              # in [0.0, W]
+    # proj_y *= self.proj_H                              # in [0.0, H]
+    
+    proj_x = ((proj_x - proj_x.min())/(proj_x.max()-proj_x.min()))*self.proj_W
+    proj_y = ((proj_y - proj_y.min())/(proj_y.max()-proj_y.min()))*self.proj_H
+    
     # round and clamp for use as index
     proj_x = np.floor(proj_x)
     proj_x = np.minimum(self.proj_W - 1, proj_x)
@@ -198,6 +256,7 @@ class LaserScan:
     self.proj_x = np.copy(proj_x)  # store a copy in orig order
 
     proj_y = np.floor(proj_y)
+    
     proj_y = np.minimum(self.proj_H - 1, proj_y)
     proj_y = np.maximum(0, proj_y).astype(np.int32)   # in [0,H-1]
     self.proj_y = np.copy(proj_y)  # stope a copy in original order
@@ -223,7 +282,7 @@ class LaserScan:
     self.proj_remission[proj_y, proj_x] = remission
     self.proj_idx[proj_y, proj_x] = indices
     self.proj_mask = (self.proj_idx > 0).astype(np.float32)
-
+      
     self.pad_rem(remission, proj_y, proj_x)
     if self.front:
       return {'range' : self.proj_range, # 256 1024
@@ -310,15 +369,15 @@ class LaserScan:
     # instances
     self.proj_inst_label[mask] = self.inst_label[self.proj_idx[mask]]
     self.proj_inst_color[mask] = self.inst_color_lut[self.inst_label[self.proj_idx[mask]]]
-
+    import cv2
     return {'label' : self.proj_sem_label, # 256 1024
             'color_label' : self.proj_sem_color, # 256 1024 3
             'inst_label': self.inst_label, # 256*1024
-            'inst_color_label' : self.proj_inst_color} # 0 3
+            'inst_color_label' : self.proj_inst_color} # 256 1024 3
 
-  def set_data(self, x, y):
+  def set_data(self, x, y, calib=None):
     if self.front:
-      x, keep_idx = self.open_scan(x)
+      x, keep_idx = self.open_scan(x, calib)
       y =self.open_label(y, keep_idx)
     else:
       x = self.open_scan(x)
@@ -343,9 +402,11 @@ if __name__ == "__main__":
     
   x = '/vit-adapter-kitti/data/semantic_kitti/kitti/dataset/sequences/00/velodyne/000000.bin'
   y = '/vit-adapter-kitti/data/semantic_kitti/kitti/dataset/sequences/00/labels/000000.label'
+  calib = '/vit-adapter-kitti/data/semantic_kitti/kitti/dataset/sequences/00/calib.txt'
   CFG = load_config()
   sem_color_dict = CFG['color_map']
-  scan = LaserScan(project=True, sem_color_dict=CFG['color_map'])
+  scan = LaserScan(project=True, sem_color_dict=CFG['color_map'], front=False)
   scan.set_data(x, y)
+  # scan.set_data(x, y, calib)
   # scan = SemLaserScan(sem_color_dict, project=True)
   # scan.open_label(y)
