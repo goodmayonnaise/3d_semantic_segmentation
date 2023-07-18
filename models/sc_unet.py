@@ -93,6 +93,7 @@ class SC_UNET_Decoder(nn.Module):
         up4 = self.conv_block4(up4)         # n 
 
         rgb = self.conv(up4)                # 3
+        rgb = nn.sigmoid(rgb)
 
         return rgb 
     
