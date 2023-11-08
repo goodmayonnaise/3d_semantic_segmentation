@@ -13,7 +13,7 @@
 * af2-s3 AF2M, AFSM 모듈 2D로 구현 (open source 없음)
   - ref : https://arxiv.org/pdf/2102.04530v1.pdf
 * ASPP 
-  - 마지막 conv layer stride=2 변경, down sampling으로 사용 
+  - 마지막 maxpool 추가, down sampling으로 사용 
 -----------------------------------------------------------------
 * DataLoaders/semantic_kitti.py
   - 전처리 없이 바로 불러오기 가능
