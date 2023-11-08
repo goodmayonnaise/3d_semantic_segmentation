@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from torch.nn import functional as F
 
 class ASPP(nn.Module):
     def __init__(self, in_dim, out_dim, d_size):
@@ -25,8 +26,8 @@ class ASPP(nn.Module):
         self.out = nn.Sequential(nn.Conv2d(out_dim*5, out_dim, 1, 1),
                                  nn.BatchNorm2d(out_dim),
                                  nn.ReLU(),
-                                 nn.Conv2d(out_dim, out_dim, 1, 2))
-    
+                                 nn.Conv2d(out_dim, out_dim, 1, 1),
+                                 nn.MaxPool2d(2))
         
     def forward(self, x):
         
@@ -36,7 +37,6 @@ class ASPP(nn.Module):
         x4 = self.aspp4(x)
         x5 = self.aspp5(x)
         _, _, w, h = x.shape
-        from torch.nn import functional as F
         x5 = F.upsample(x5, (w, h), mode='bilinear')
 
         cat = torch.cat([x1, x2, x3, x4, x5], 1)
@@ -44,13 +44,11 @@ class ASPP(nn.Module):
 
         return out 
     
-
-
 if __name__ == "__main__":
 
-    aspp = ASPP(3, 32, 12)
+    aspp = ASPP(in_dim=3, out_dim=32, d_size=12)
 
-    input = torch.rand([5, 3, 256, 1248])
+    input = torch.rand([2, 3, 256, 1248])
     aspp(input)
     print()
-        
+    torch.onnx.export(aspp, input, 'aspp.onnx')
